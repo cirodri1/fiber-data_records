@@ -27,9 +27,13 @@ fastp -i READ1.fastq -o READ1_clean.fastq --average_qual 30 --length_required 10
 ##### Explanation:
 Adapter trimming is enabled by default
 -i : forward reads
+
 -I : reverse reads
+
 -o : output name for forward reads
+
 -O : output name for reverse reads
+
 --average_qual 30 : filtering reads by 30 average quality score, if one read’s average quality score is less than 30, then this read/pair is discarded.
 --length_required 100 : reads shorter than length_required will be discarded
 *Note: 100 was chosen because studies usually removed things shorter than 150, 250 or 350, so to be lenient we left a 100 length minimum.
