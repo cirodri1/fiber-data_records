@@ -2,7 +2,6 @@
 # Removal of low-quality reads and primers from 16S rRNA amplicon sequencing data
 
 ## Removal of low quality reads:
-
 ### Software needed:
 Fastp program
 Version: 0.20.0
@@ -15,14 +14,17 @@ To install it: conda install -c bioconda fastp
 To check installation: fastp -h 
 
 ### Code:
-
 #### For paired-end data (PE):
+```
 fastp -i READ1.fastq -I READ2.fastq -o READ1_clean.fastq -O READ2_clean.fastq --average_qual 30 --length_required 100 --detect_adapter_for_pe --correction
+```
 
 #### For single data (SE):
+```
 fastp -i READ1.fastq -o READ1_clean.fastq --average_qual 30 --length_required 100
+```
 
-Explanation:
+##### Explanation:
 Adapter trimming is enabled by default
 -i : forward reads
 -I : reverse reads
