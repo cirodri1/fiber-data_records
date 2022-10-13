@@ -1,5 +1,7 @@
 
-# Removal of low-quality reads primers from 16S rRNA amplicon sequencing data
+# Removal of low-quality reads and primers from 16S rRNA amplicon sequencing data
+
+## Removal of low quality reads:
 
 ### Software needed:
 Fastp program
@@ -32,3 +34,12 @@ Adapter trimming is enabled by default
 --detect_adapter_for_pe : the adapter sequence detection is enabled for paired data to clean up data from adapter contamination.
 For SE data, the adapters are evaluated by analyzing the tails of first ~1M reads. This evaluation may be inacurrate, and you can specify the adapter sequence by -a or --adapter_sequence option. If adapter sequence is specified, the auto detection for SE data will be disabled.
 --correction : enable base correction in overlapped regions, which try to find an overlap of each pair of reads. If a proper overlap is found, it can correct mismatched base pairs in overlapped regions of paired end reads, if one base is with high quality while the other is with ultra low quality. If a base is corrected, the quality of its paired base will be assigned to it so that they will share the same quality.  
+
+
+## Removal of primers:
+### Software needed:
+Cutadapt program
+Version: 2.4
+https://cutadapt.readthedocs.io/en/latest/ 
+#### Citation: 
+MARTIN, Marcel. Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnet.journal, [S.l.], v. 17, n. 1, p. pp. 10-12, may 2011. ISSN 2226-6089.
