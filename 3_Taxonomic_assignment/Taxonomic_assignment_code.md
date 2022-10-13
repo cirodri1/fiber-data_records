@@ -37,7 +37,7 @@ qiime tools import \
 
 
 ### Step 3: 
-Extract reads - Extract the region of reference reads that correspond to the region that matches the dataset that you are working with according to the primer set and cutting parameters: (time: 5 min)
+Extract reads - Extract the region of reference reads that correspond to the region that matches the dataset that you are working with according to the primer set and cutting parameters:
 https://docs.qiime2.org/2020.2/plugins/available/feature-classifier/extract-reads/ 
 ### Example code for Morales_2016_V3V4: 
 341F (5′- CCTACGGGNGGCWGCAG -3′)
