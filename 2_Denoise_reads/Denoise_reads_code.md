@@ -11,7 +11,7 @@ https://docs.qiime2.org/2020.11/plugins/available/dada2/
 Benjamin J Callahan, Paul J McMurdie, Michael J Rosen, Andrew W Han, Amy Jo A Johnson, and Susan P Holmes. Dada2: high-resolution sample inference from illumina amplicon data. Nature methods, 13(7):581, 2016. doi:10.1038/nmeth.3869.
 
 
-### Code:
+### Example Code:
 #### For paired-end data (PE):
 ```
 qiime dada2 denoise-paired \
@@ -45,18 +45,18 @@ qiime dada2 denoise-single \
 ```
 #### Table with parameters and code per study:
 
-| Study Name | Database where raw reads are located |
-| Baxter_2019_V4 | --- |
-Dahl_2016_V1V2 | --- |
-Deehan_2020_V5V6 | --- |
-Healey_2018_V3V4 | --- |
-Hooda_2012_V4V6_540_1 | --- |
-Kovatcheva_2015_V1V2 | --- |
-Liu_2017_V4 | --- |
-Morales_2016_V3V4 | --- |
-Rasmussen_2017_V1V3 | --- |
-Tap_2015_V3V4 | --- |
-Vandeputte_2017_V4 | --- |
-Venkataraman_2016_V4 | --- |
+| Study Name | Database where raw reads are located | Accession Number | Number of samples | Illumina platform used | Single or paired end data | Primers used | Denoise DADA2 paremeters |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Baxter_2019_V4 | NCBI Sequence Read Archive | SRP128128 | 1205 | Illumina MiSeq | paired | GTGCCAGCMGCCGCGGTAA...ATTAGAWACCCBDGTAGTCC | --- |
+Dahl_2016_V1V2 | NCBI Sequence Read Archive | SRP403421 | 212 | Illumina MiSeq | paired | AGMGTTYGATYMTGGCTCAG...ACTCCTACGGGAGGCAGC | --- |
+Deehan_2020_V5V6 | NCBI Sequence Read Archive | SRP219296 | 200 | Illumina MiSeq | paired | RGGATTAGATACCC...AGGTGNTGCATGGYYGTCG | --- |
+Healey_2018_V3V4 | NCBI Sequence Read Archive | SRP120250 | 134 | Illumina MiSeq | paired | CGGGAGGCAGCAG...ATTAGAWACCCBDGTA | --- |
+Hooda_2012_V4V6_540_1 | NCBI Sequence Read Archive | SRP403421 | 28 | 454 titanium technology | single | GTGCCAGCMGCNGCGG...GGGTTNCGNTCGTTG | --- |
+Kovatcheva_2015_V1V2 | NCBI Sequence Read Archive | SRP062889 | 60 | 454/Roche pyrosequencing | single | TGCTGCCTCCCGTAGGAGT...CTGAGCCAKGATCAAACTCT | --- |
+Liu_2017_V4 | European Nucleotide Archive | PRJEB15149 | 132 | Ion Torrent | single | GTGTGCCAGCMGCCGCGGTAA...ATTAGAWACCCBDGTAGTCCGG | --- |
+Morales_2016_V3V4 | NCBI Sequence Read Archive | SRP403421 | 82 | Illumina MiSeq | paired | CCTACGGGNGGCWGCAG...GGATTAGATACCCBDGTAGTC | --- |
+Rasmussen_2017_V1V3 | NCBI Sequence Read Archive | SRP106361 | 82 | Roche 454 GS FLX pyrosequencing | single | GAGTTTGATCNTGGCTCAG...CAGCMGCCGCNGTAANAC | --- |
+Tap_2015_V3V4 | European Nucleotide Archive | ERP000220 | 76 | 454/Roche pyrosequencing | single | TACGGRAGGCAGCAG...ATTAGATACCCTGGTAGTCC | --- |
+Vandeputte_2017_V4 | NCBI Sequence Read Archive | SRP067761 | 157 | Illumina MiSeq | paired | GTGCCAGCMGCCGCGGTAA...ATTAGAWACCCBDGTAGTCC | --- |
 
 
