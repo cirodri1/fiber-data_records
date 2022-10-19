@@ -48,7 +48,7 @@ qiime dada2 denoise-single \
 | Study Name | Database where raw reads are located | Accession Number | Number of samples | Illumina platform used | Single or paired end data | Primers used | Denoise DADA2 paremeters |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Baxter_2019_V4 | NCBI Sequence Read Archive | SRP128128 | 1205 | Illumina MiSeq | paired | GTGCCAGCMGCCGCGGTAA...ATTAGAWACCCBDGTAGTCC | `qiime dada2 denoise-paired --i-demultiplexed-seqs 1_imported_paired-end_data.qza --p-trunc-len-f 220 --p-trunc-len-r 200 --p-trim-left-f 0 --p-trim-left-r 0 --o-table 3_feature-table-dada2.qza --o-representative-sequences 3_feature-rep-seqs-dada2.qza --o-denoising-stats 3_stats-dada2.qza` |
-Dahl_2016_V1V2 | NCBI Sequence Read Archive | SRP403421 | 212 | Illumina MiSeq | paired | AGMGTTYGATYMTGGCTCAG...ACTCCTACGGGAGGCAGC | --- |
+Dahl_2016_V1V2 | NCBI Sequence Read Archive | SRP403421 | 212 | Illumina MiSeq | paired | AGMGTTYGATYMTGGCTCAG...ACTCCTACGGGAGGCAGC | `"qiime dada2 denoise-paired  --i-demultiplexed-seqs 1_imported_paired-end_data.qza  --p-trunc-len-f 210 --p-trunc-len-r 205  --p-trim-left-f 0  --p-trim-left-r 0  --o-table 3_feature-table-dada2.qza  --o-representative-sequences 3_feature-rep-seqs-dada2.qza --o-denoising-stats 3_stats-dada2.qza` |
 Deehan_2020_V5V6 | NCBI Sequence Read Archive | SRP219296 | 200 | Illumina MiSeq | paired | RGGATTAGATACCC...AGGTGNTGCATGGYYGTCG | --- |
 Healey_2018_V3V4 | NCBI Sequence Read Archive | SRP120250 | 134 | Illumina MiSeq | paired | CGGGAGGCAGCAG...ATTAGAWACCCBDGTA | --- |
 Hooda_2012_V4V6_540_1 | NCBI Sequence Read Archive | SRP403421 | 28 | 454 titanium technology | single | GTGCCAGCMGCNGCGG...GGGTTNCGNTCGTTG | --- |
