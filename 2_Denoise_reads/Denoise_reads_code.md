@@ -43,5 +43,20 @@ qiime dada2 denoise-single \
  &> 3_denoise.log
 
 ```
+#### Table with parameters and code per study:
+
+| Study Name | Database where raw reads are located |
+| Baxter_2019_V4 | --- |
+Dahl_2016_V1V2 | --- |
+Deehan_2020_V5V6 | --- |
+Healey_2018_V3V4 | --- |
+Hooda_2012_V4V6_540_1 | --- |
+Kovatcheva_2015_V1V2 | --- |
+Liu_2017_V4 | --- |
+Morales_2016_V3V4 | --- |
+Rasmussen_2017_V1V3 | --- |
+Tap_2015_V3V4 | --- |
+Vandeputte_2017_V4 | --- |
+Venkataraman_2016_V4 | --- |
 
 
