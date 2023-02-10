@@ -57,6 +57,6 @@ Liu_2017_V4 | European Nucleotide Archive | PRJEB15149 | 132 | Ion Torrent | sin
 Morales_2016_V3V4 | NCBI Sequence Read Archive | SRP403421 | 82 | Illumina MiSeq | paired | CCTACGGGNGGCWGCAG...GGATTAGATACCCBDGTAGTC | `qiime dada2 denoise-paired --i-demultiplexed-seqs 2_primer-trimmed_imported_paired-end_data.qza --p-trunc-len-f 270 --p-trunc-len-r 188 --p-trim-left-f 0 --p-trim-left-r 0` |
 Rasmussen_2017_V1V3 | NCBI Sequence Read Archive | SRP106361 | 82 | Roche 454 GS FLX pyrosequencing | single | GAGTTTGATCNTGGCTCAG...CAGCMGCCGCNGTAANAC | `qiime dada2 denoise-pyro --i-demultiplexed-seqs 2_primer-trimmed_imported_single-end_data.qza --p-trunc-len 175 --p-trim-left 0` |
 Tap_2015_V3V4 | European Nucleotide Archive | ERP000220 | 76 | 454/Roche pyrosequencing | single | TACGGRAGGCAGCAG...ATTAGATACCCTGGTAGTCC | `qiime dada2 denoise-pyro --i-demultiplexed-seqs 2_primer-trimmed_imported_single-end_data.qza --p-trunc-len 224 --p-trim-left 0` |
-Vandeputte_2017_V4 | NCBI Sequence Read Archive | SRP067761 | 157 | Illumina MiSeq | paired | GTGCCAGCMGCCGCGGTAA...ATTAGAWACCCBDGTAGTCC | `qiime dada2 denoise-paired --i-demultiplexed-seqs 1_imported_paired-end_data.qza --p-trunc-len-f 211 --p-trunc-len-r 108 --p-trim-left-f 0 --p-trim-left-r 0` |
+Venkataraman_2016_V4 | NCBI Sequence Read Archive | SRP067761 | 157 | Illumina MiSeq | paired | GTGCCAGCMGCCGCGGTAA...ATTAGAWACCCBDGTAGTCC | `qiime dada2 denoise-paired --i-demultiplexed-seqs 1_imported_paired-end_data.qza --p-trunc-len-f 211 --p-trunc-len-r 108 --p-trim-left-f 0 --p-trim-left-r 0` |
 
 
