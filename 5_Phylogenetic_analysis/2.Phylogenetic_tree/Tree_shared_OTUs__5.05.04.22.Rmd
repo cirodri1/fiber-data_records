@@ -1,0 +1,219 @@
+---
+title: "TREE all studies with shared OTUs, present in 3 studies or more"
+author: "Cynthia Rodriguez"
+output: html_document
+---
+
+-----
+
+### Load libraries needed:
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+library("Biostrings")
+packageVersion("Biostrings")
+
+library("DECIPHER")
+packageVersion("DECIPHER")
+
+library("phylotools")
+packageVersion("phylotools")
+
+library("phangorn")
+packageVersion("phangorn")
+```
+
+
+### Import DESeq2 averaged log2foldchange results:
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+setwd("/Volumes/Seagate/Meta_analysis/Merged_V4_data/Phylogenetic_analysis/Shared_OTUs/3>studies/1.Selecting_OTUs/Output_files")
+
+#Import DESeq2 result averaged table with taxonomy attached
+deseq2_output = read.csv("8.Merged_repeated_OTUs_averages_taxonomy_>3.csv", header=TRUE, sep=",")
+
+#See some of the results
+head(deseq2_output)
+```
+
+
+### Import DNA representative sequences repeated in 5 studies or more:
+```{r}
+Rep.seq = readDNAStringSet("Output_files/1.Repeated.Rep.Seq_>3.fa", format="fasta")
+#See some of the sequences
+head(Rep.seq)
+```
+
+### Import outgroup for phylogenetic tree:
+```{r}
+
+setwd("/Volumes/Seagate/Meta_analysis/Merged_V4_data/Phylogenetic_analysis")
+
+outgroup = readDNAStringSet("Methanosarcina_barkeri.fasta", format="fasta") 
+```
+
+## __________ Run multiple alignment with DECIPHER _________ ##
+Reference: http://www2.decipher.codes
+
+### The is.element() function checks the presence of element(s) of an object in another object, in this case the OTU names
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+obj_otu = is.element(names(Rep.seq), deseq2_output$OTU)
+obj_otu
+```
+Result: We can see that all the names match between the DESeq2 results and the representative DNA sequences
+
+### Merge the fasta of OTUs and outgroup
+```{r}
+Rep.seq_out = c(outgroup, Rep.seq)
+```
+
+### Perform alignment with DECIPHER:
+Reference: http://www2.decipher.codes/AlignSequences.html
+```{r}
+Rep.seq_aligned_out = AlignSeqs(Rep.seq_out)
+```
+
+
+### Export alignment, fasta and phylip formatted
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+# with outgruop
+writeXStringSet(Rep.seq_aligned_out, file="Output_files/2.1_aligned_seq_with_outgroup.fa", format="fasta")
+
+# with outgruop
+Rep.seq_aligned_no_out = Rep.seq_aligned_out[names(Rep.seq_aligned_out)!="Methanosarcina_barkeri"] 
+writeXStringSet(Rep.seq_aligned_no_out, file="Output_files/2.2_aligned_seq_without_outgroup.fa", format="fasta")
+
+# export the phylip-formatted fasta with outgroup
+Rep.seq_aligned_phylip = read.fasta("Output_files/2.1_aligned_seq_with_outgroup.fa")
+dat2phylip(Rep.seq_aligned_phylip, outfile="Output_files/2.2_aligned_seq_with_outgroup.phy")
+```
+
+## __________ Phylogenetic Tree with phangorn _________ ##
+Reference: https://rdrr.io/github/KlausVigo/phangorn/
+
+### Transform alignmnet of DNA sequences into phyDat format:
+Reference: https://rdrr.io/github/KlausVigo/phangorn/man/phyDat.html
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+
+#Read in data if not already loaded:
+Rep.seq_aligned_out <- readDNAStringSet("Output_files/2.1_aligned_seq_with_outgroup.fa", format="fasta")
+
+phang_align_out <- phyDat(as(Rep.seq_aligned_out, "matrix"), type="DNA")
+
+#Check that the conversion worked- should give class type "phyDat":
+class(phang_align_out)
+```
+
+### Compute Pairwise Distances from Sequences (phyDat formatted)
+Reference: https://rdrr.io/github/KlausVigo/phangorn/man/dist.hamming.html
+```{r}
+pairwise.dist_mat_out <- dist.ml(phang_align_out)
+```
+
+### Make a neighbor-joining tree with phangorn -> treeNJ
+Reference: https://rdrr.io/github/KlausVigo/phangorn/man/NJ.html
+```{r}
+# Make a neighbor-joining tree
+treeNJ_out <- NJ(pairwise.dist_mat_out)
+
+# Root the tree from the outgroup:
+treeNJ_out <- root(treeNJ_out, resolve.root = T, outgroup = "Methanosarcina_barkeri")
+
+# type "treeNJ_out" and check #nodes - The paste0() is a built-in R function used to concatenate all elements without a separator: This numbers the nodes
+treeNJ_out$node.label <- paste0("node", 1:treeNJ_out$Nnode) 
+
+```
+
+### Export NJ Tree:
+```{r}
+#Save tree wuth outgroup
+write.tree(treeNJ_out, file="Output_files/3.1_otu_tree_NJ_with_outgroup.tre")
+
+#Save tree without outgroup
+#first drop the outgroup tip:
+treeNJ <- drop.tip(treeNJ_out, "Methanosarcina_barkeri")
+treeNJ$node.label <- paste0("node", 1:treeNJ$Nnode) 
+#then save tree without outgroup:
+write.tree(treeNJ, file="Output_files/3.2_otu_tree_NJ_with_outgroup.tre")
+```
+
+
+## Make neighbor-joining trees with 100 bootstrap -> NJtrees
+Reference: https://rdrr.io/github/KlausVigo/phangorn/man/bootstrap.pml.html
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+#Boostrapping:
+NJtrees_out <- bootstrap.phyDat(phang_align_out, FUN=function(x)NJ(dist.ml(x)), bs=100)
+
+#Set outgroup:
+NJtrees_out <- lapply(NJtrees_out, root, resolve.root = T, outgroup = "Methanosarcina_barkeri")
+
+ # type "NJtrees_out" and check #nodes:
+for (Y in 1:100){NJtrees_out[[Y]]$node.label <- paste0("node", 1:NJtrees_out[[Y]]$Nnode)}
+
+#For tree without outgroup
+NJtrees <- lapply(NJtrees_out, drop.tip, tip="Methanosarcina_barkeri")
+# type "NJtrees_out" and check #nodes
+for (Z in 1:100){NJtrees[[Z]]$node.label <- paste0("node", 1:NJtrees[[Z]]$Nnode)}
+
+class(NJtrees_out) <- "multiPhylo"
+class(NJtrees) <- "multiPhylo"
+```
+
+### Export NJ Trees with boostrapping:
+```{r}
+write.tree(NJtrees_out, file="Output_files/4.1_otu_tree_NJ_bootstrap_with_outgroup.tre")
+write.tree(NJtrees, file="Output_files/4.2_otu_tree_NJ_bootstrap_without_outgroup.tre")
+```
+
+### plotBS: Plotting trees with bootstrap values:
+Reference: https://rdrr.io/github/KlausVigo/phangorn/man/plotBS.html
+
+plotBS plots a phylogenetic tree with the bootstrap values assigned to the (internal) edges. It can also used to assign bootstrap values to a phylogenetic tree.
+```{r}
+# With outgroup
+treeNJbest_out <- plotBS(treeNJ_out, NJtrees_out, "phylogram")
+#Root tree at outgroup:
+treeNJbest_out <- root(treeNJbest_out, resolve.root = T, outgroup = "Methanosarcina_barkeri")
+
+### Export NJ Trees with boostrapping:
+# With outgroup
+write.tree(treeNJbest_out, file="Output_files/5.1_otu_tree_NJ_best_with_outgroup.tre")
+
+
+# Without outgroup:
+treeNJbest <- drop.tip(treeNJbest_out, "Methanosarcina_barkeri")
+node_out <- length(treeNJbest_out$node.label)
+node <- length(treeNJbest$node.label)
+
+### Export NJ Trees with boostrapping:
+# Without outgroup
+write.tree(treeNJbest, file="Output_files/5.2_otu_tree_NJ_best_without_outgroup.tre")
+```
+
+
+### Number the nodes - this gets rid of boostrapping values:
+```{r}
+#Number the nodes - this gets rid of boostrapping values: with outgroup
+treeNJbest_out$node.label <- paste0("node", 1:treeNJbest_out$Nnode)
+
+### Number the nodes - this gets rid of boostrapping values: without outgroup
+treeNJbest$node.label <- paste0("node", 1:treeNJbest$Nnode)
+```
+
+### Export NJ Trees with boostrapping: 
+(Note the boostrapping values do not get saved if I run:
+#treeNJbest_out$node.label <- paste0("node", 1:treeNJbest_out$Nnode)
+```{r}
+# With outgroup
+write.tree(treeNJbest_out, file="Output_files/6.1_otu_tree_NJ_best_nodes_with_outgroup.tre")
+
+# Without outgroup
+write.tree(treeNJbest, file="Output_files/6.2_otu_tree_NJ_best_nodes_without_outgroup.tre")
+```
+
+
+
+#### To see session information:
+```{r}
+sessionInfo()
+```
+
+
+-----

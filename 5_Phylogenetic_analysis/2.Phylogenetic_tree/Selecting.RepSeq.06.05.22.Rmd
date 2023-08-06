@@ -1,0 +1,47 @@
+---
+title: "Selecting Representative Sequences for phylogenetic tree present in 3 studies or more"
+author: "Cynthia Rodriguez"
+output: html_document
+---
+
+-----
+
+### Load libraries needed:
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+library("Biostrings")
+packageVersion("Biostrings")
+```
+
+### Import shared OTU list:
+```{r}
+#Make sure column 1 is named OTU
+
+Shared_OTUs = read.csv("Input_files/4.repeated_OTUs_>3.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+head(Shared_OTUs)
+```
+
+### Import all Representative Sequences fasta file:
+```{r}
+
+all.Rep.Seq = readDNAStringSet("Input_files/1.all_dna-sequences.fasta", format="fasta")
+
+head(all.Rep.Seq)
+```
+
+### Install seqinr:
+Exploratory data analysis and data visualization for biological sequence (DNA and protein) data
+Reference: https://rdrr.io/rforge/seqinr/
+```{r}
+#Install package and load it
+#install.packages("seqinr")
+library("seqinr")
+
+Repeated.Rep.Seq <- all.Rep.Seq[c(which(names(all.Rep.Seq) %in% Shared_OTUs$OTU))]
+
+#Save extracted representative sequences:
+writeXStringSet(Repeated.Rep.Seq, file="Output_files/1.Repeated.Rep.Seq_>3.fa", format="fasta")
+```
+
+
+
