@@ -1,0 +1,164 @@
+---
+title: "ConsenTrait all studies sharing V4 with OTUs present in 3 studies or more"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>")
+```
+
+### Packages needed:
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+library("ape")
+library("castor")
+
+library("picante")
+library("ggplot2")
+library("extrafont")
+```
+
+## __________ Documents needed: __________##
+* 1. *DESeq2.result* -  **8.Merged_repeated_OTUs_averages_taxonomy_>5.csv** is the DESeq2 result table with the shared OTUs across studies. It has the DESeq2 log2foldchange averages across studies with OTUs and taxonomic assignment.
+
+* 2. *treeNJbest* - **6.2_otu_tree_NJ_best_nodes_without_outgroup.tre** is the best phylogentic tree from boostrapping with no  outgroup.
+
+
+
+
+## __________ Read in your data _________ ##
+
+
+### Import files: 
+```{r}
+setwd("/Volumes/Seagate/Meta_analysis/Merged_V4_data/Phylogenetic_analysis/Shared_OTUs/3>studies/1.Selecting_OTUs/Output_files")
+
+DESeq2.result = read.csv("8.Merged_repeated_OTUs_averages_taxonomy_>3.csv", header=TRUE, sep=",")
+```
+
+```{r}
+setwd("/Volumes/Seagate/Meta_analysis/Merged_V4_data/Phylogenetic_analysis/Shared_OTUs/3>studies/2.Phylogenetic_tree/Output_files")
+
+treeNJbest = read.tree("6.2_otu_tree_NJ_best_nodes_without_outgroup.tre")
+
+```
+
+
+### Set responses (increase or decrese) for OTUs:
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+DESeq2.result$Increase = ifelse(DESeq2.result$log2FoldChange >= 0, 1, 0)
+DESeq2.result$Decrease = ifelse(DESeq2.result$log2FoldChange >= 0, 0, 1)
+
+#See data:
+head(DESeq2.result)
+
+#Save file:
+write.table(DESeq2.result, "Output_files/1_consentrait_response.txt", sep="\t", append=F, quote=F, row.names=F, col.names=T)
+```
+
+### Match OTUs with tree tip labes:
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+data.consent = DESeq2.result[match(treeNJbest$tip.label, DESeq2.result$OTU),]
+
+#See data:
+head(data.consent)
+```
+
+## __________ ConsenTrait _________ ##
+
+### Run consenTRAIT with castor -> consenTRAIT_Increase, consenTRAIT_Decrease
+https://www.rdocumentation.org/packages/castor/versions/1.6.1/topics/get_trait_depth
+Given a rooted phylogenetic tree and presences/absences of a binary trait for each tip, calculate the mean phylogenetic depth at which the trait is conserved across clades, in terms of the consenTRAIT metric introduced by Martiny et al (2013). This is the mean depth of clades that are positive in the trait (i.e. in which a sufficient fraction of tips exhibits the trait).
+```{r}
+Min_fraction <- 0.9
+
+consenTRAIT_Increase <- get_trait_depth(treeNJbest, data.consent$Increase, 
+                  min_fraction=Min_fraction, 
+                  count_singletons=TRUE,singleton_resolution=0,weighted=FALSE, Npermutations=1000)
+
+consenTRAIT_Decrease <- 
+  get_trait_depth(treeNJbest, data.consent$Decrease, 
+                  min_fraction=Min_fraction, 
+                  count_singletons=TRUE,singleton_resolution=0,weighted=FALSE, Npermutations=1000)
+```
+
+## Run consenTRAIT after tipShuffle with picante to see tauD distribution -> plot_consenTRAIT
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+consenTRAIT_Increase_null <- 
+  replicate(1000, {
+    treeNJ_increase <- tipShuffle(treeNJbest)
+    data.consent_increase <- DESeq2.result[match(treeNJ_increase$tip.label, DESeq2.result$OTU),]
+    consenTRAIT_null <- get_trait_depth(treeNJbest, data.consent_increase$Increase, 
+                                        min_fraction=Min_fraction, 
+                                        count_singletons=TRUE,singleton_resolution=0,weighted=FALSE, Npermutations=0)
+    consenTRAIT_null$mean_depth
+  })
+
+p.val_Increase <- rank(-c(consenTRAIT_Increase$mean_depth, consenTRAIT_Increase_null))[1]/1001
+
+plot_consenTRAIT_increase <- 
+  ggplot() + aes(consenTRAIT_Increase_null) + geom_histogram(binwidth=.00005) +
+  geom_vline(xintercept = consenTRAIT_Increase$mean_depth, colour="Blue") +
+  labs(x="mean depth (null model)", y="Fraction (1000 permutations)") + theme_classic() +
+  theme(
+    axis.text.x=element_text(size=12), axis.title.x=element_text(size=12),
+    axis.text.y=element_text(size=12), axis.title.y=element_text(size=12))
+
+plot_consenTRAIT_increase
+
+consenTRAIT_Decrease_null <- 
+  replicate(1000, {
+    treeNJ_decrease <- tipShuffle(treeNJbest)
+    data.consent_decrease <- DESeq2.result[match(treeNJ_decrease$tip.label, DESeq2.result$OTU),]
+    consenTRAIT_null <- get_trait_depth(treeNJbest, data.consent_decrease$Decrease, 
+                                        min_fraction=Min_fraction, 
+                                        count_singletons=TRUE,singleton_resolution=0,weighted=FALSE, Npermutations=0)
+    consenTRAIT_null$mean_depth
+  })
+
+p.val_Decrease <- rank(-c(consenTRAIT_Decrease$mean_depth, consenTRAIT_Decrease_null))[1]/1001
+ 
+plot_consenTRAIT_decrease <- 
+  ggplot() + aes(consenTRAIT_Decrease_null) + geom_histogram(binwidth=.00005) +
+  geom_vline(xintercept = consenTRAIT_Decrease$mean_depth, colour="Red") +
+  labs(x="mean depth (null model)", y="Fraction (1000 permutations)") + theme_classic() +
+  theme(
+    axis.text.x=element_text(size=12), axis.title.x=element_text(size=12),
+    axis.text.y=element_text(size=12), axis.title.y=element_text(size=12))
+
+plot_consenTRAIT_decrease
+
+library("cowplot")
+plot_consenTRAIT <- 
+  plot_grid(plot_consenTRAIT_increase, plot_consenTRAIT_decrease, nrow = 2,
+            align = "v", labels = c("Increase", "Decrease"), label_size = 12)
+
+plot_consenTRAIT
+
+title <- ggdraw() #+ draw_label(X)
+
+plot_consenTRAIT <- plot_grid(title, plot_consenTRAIT, ncol=1, rel_heights=c(0.1, 1)) 
+
+plot_consenTRAIT
+
+#Save image
+ggsave(plot_consenTRAIT,filename="Figures/graph_consenTRAIT_null.pdf" ,width=6, height=6)
+```
+
+### Export result:
+```{r message = FALSE, warning = FALSE, echo = TRUE}
+consenTRAIT = data.frame(
+  increase=consenTRAIT_Increase$mean_depth, decrease=consenTRAIT_Decrease$mean_depth,
+  p_increase=p.val_Increase, p_decrease=p.val_Decrease)
+
+#See results:
+consenTRAIT
+
+write.table(consenTRAIT, "Output_files/2_consentrait_result.txt", sep="\t", append=F, quote=F, row.names=F, col.names=T)
+```
+
+
+#### To see session information:
+```{r}
+sessionInfo()
+```
