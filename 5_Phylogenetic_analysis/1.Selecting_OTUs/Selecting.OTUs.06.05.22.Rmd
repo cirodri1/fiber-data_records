@@ -1,0 +1,238 @@
+---
+title: "Selecting OTUs"
+author: "Cynthia Rodriguez"
+output: html_document
+---
+
+-----
+
+### Import data:
+```{r}
+data1 = read.csv("Input_files/Baxter_deseq2_result_table.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+data2 = read.csv("Input_files/Healey_deseq2_result_table.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+data3 = read.csv("Input_files/Hooda_deseq2_result_table.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+data4 = read.csv("Input_files/Liu_deseq2_result_table.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+data5 = read.csv("Input_files/Morales_deseq2_result_table.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+data6 = read.csv("Input_files/Tap_deseq2_result_table.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+data7 = read.csv("Input_files/Vandeputte_deseq2_result_table.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+data8 = read.csv("Input_files/Venkataraman_deseq2_result_table.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+```
+
+### Extract OTU column as a vector:
+```{r}
+data1vector <- c(data1$OTU)
+ 
+data2vector <- c(data2$OTU)
+ 
+data3vector <- c(data3$OTU)
+ 
+data4vector <- c(data4$OTU)
+ 
+data5vector <- c(data5$OTU)
+ 
+data6vector <- c(data6$OTU)
+ 
+data7vector <- c(data7$OTU)
+ 
+data8vector <- c(data8$OTU)
+
+```
+
+
+### Create one vector with OTUs from all studies:
+```{r}
+mergedvector <- c(data1vector, data2vector, data3vector, data4vector, data5vector, data6vector, data7vector, data8vector)
+
+#Save merged vector:
+write.csv(mergedvector, file = "Output_files/1.all.OTUs.csv")
+```
+
+### Find all the OTUs:
+```{r}
+#How many characters repeat:
+length(which(table(mergedvector)>1))
+
+#Which characters repeat and their position in the vector:
+all_OTUs <-which(table(mergedvector)>1)
+
+#Save characters that repeat
+write.csv(all_OTUs, file = "Output_files/2.present.all_OTUs.csv")
+```
+
+### Find OTUs that repeat in all studies:
+```{r}
+#How many characters repeat:
+length(which(table(mergedvector)>7))
+
+#Which characters repeat and their position in the vector:
+all_repeated_OTUs <-which(table(mergedvector)>7)
+
+#Save characters that repeat
+write.csv(all_repeated_OTUs, file = "Output_files/3.repeated_OTUs_all.csv")
+```
+
+
+### Find OTUs that repeat more 5 times or more:
+```{r}
+#How many characters repeat:
+length(which(table(mergedvector)>4))
+
+#Which characters repeat and their position in the vector:
+repeated_OTUs_5 <-which(table(mergedvector)>4)
+
+#Save characters that repeat
+write.csv(repeated_OTUs_5, file = "Output_files/4.repeated_OTUs_>5.csv")
+```
+
+### Find OTUs that repeat 3 times or more:
+```{r}
+#How many characters repeat:
+length(which(table(mergedvector)>2))
+
+#Which characters repeat and their position in the vector:
+repeated_OTUs_5 <-which(table(mergedvector)>2)
+
+#Save characters that repeat
+write.csv(repeated_OTUs_5, file = "Output_files/4.repeated_OTUs_>3.csv")
+```
+
+
+Results:
+272 OTUs repeat 3 times or more.
+
+### Extract rows with repeated_OTUs identified from raw data:
+```{r}
+library("dplyr")
+
+#Import data with the repeated OTUs: change header to say OTU before importing
+repeated_OTUs1 = read.csv("Output_files/4.repeated_OTUs_>3.csv", header=TRUE, sep=",", skipNul=TRUE)
+head(repeated_OTUs1)
+
+repeated_OTUs_vector <- c(repeated_OTUs1$OTU)
+
+#See vector:
+head(repeated_OTUs_vector)
+
+#Baxter:
+#Extract rows based on vector imported:
+data1_repeated_5 <-data1[data1$OTU %in% repeated_OTUs_vector,]
+
+#Save data in file::
+write.table(data1_repeated_5, file = "Output_files/5.Baxter_repeated_OTUs_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+
+#Healey:
+#Extract rows based on vector imported:
+data2_repeated_5 <-data2[data2$OTU %in% repeated_OTUs_vector,]
+
+#Save data in file::
+write.table(data2_repeated_5, file = "Output_files/5.Healey_repeated_OTUs_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+
+#Hooda:
+#Extract rows based on vector imported:
+data3_repeated_5 <-data3[data3$OTU %in% repeated_OTUs_vector,]
+
+#Save data in file::
+write.table(data3_repeated_5, file = "Output_files/5.Hooda_repeated_OTUs_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+
+#Liu:
+#Extract rows based on vector imported:
+data4_repeated_5 <-data4[data4$OTU %in% repeated_OTUs_vector,]
+
+#Save data in file::
+write.table(data4_repeated_5, file = "Output_files/5.Liu_repeated_OTUs_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+
+#Morales:
+#Extract rows based on vector imported:
+data5_repeated_5 <-data5[data5$OTU %in% repeated_OTUs_vector,]
+
+#Save data in file::
+write.table(data5_repeated_5, file = "Output_files/5.Morales_repeated_OTUs_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+
+#Tap:
+#Extract rows based on vector imported:
+data6_repeated_5 <-data6[data6$OTU %in% repeated_OTUs_vector,]
+
+#Save data in file::
+write.table(data6_repeated_5, file = "Output_files/5.Tap_repeated_OTUs_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+
+#Vandeputte:
+#Extract rows based on vector imported:
+data7_repeated_5 <-data7[data7$OTU %in% repeated_OTUs_vector,]
+
+#Save data in file::
+write.table(data7_repeated_5, file = "Output_files/5.Vandeputte_repeated_OTUs_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+
+#Venkataraman:
+#Extract rows based on vector imported:
+data8_repeated_5 <-data8[data8$OTU %in% repeated_OTUs_vector,]
+
+#Save data in file::
+write.table(data8_repeated_5, file = "Output_files/5.Venkataraman_repeated_OTUs_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+```
+
+### Merge dataframes that have common OTUs (present in at least 5 studies):
+```{r}
+Merged <- rbind(data1_repeated_5, data2_repeated_5, data3_repeated_5, data4_repeated_5, data5_repeated_5, data6_repeated_5, data7_repeated_5, data8_repeated_5)
+
+head(Merged)
+
+#Save merged data:
+write.table(Merged, file = "Output_files/6.Merged_repeated_OTUs_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+#Outside of R sort the data by OTU
+
+```
+
+
+### Average across OTUs from merged data (present in at least 5 studies):
+Reference:https://www.geeksforgeeks.org/how-to-calculate-the-mean-by-group-in-r-dataframe/
+```{r}
+#Import merged data with the repeated OTUs:
+Merged1 = read.csv("Output_files/6.Merged_repeated_OTUs_>3_sorted.csv", header=TRUE, sep=",", skipNul=TRUE)
+head(Merged1)
+
+#Average across repeated OTUs:
+average_OTUs <- aggregate(x= Merged1$log2FoldChange,     
+                 by = list(Merged1$OTU),   # Specify group indicator    
+                  FUN = mean)   # Specify function (i.e. mean)
+
+#Save merged data with averages:
+write.table(average_OTUs, file = "Output_files/7.Merged_repeated_OTUs_averages_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+```
+
+### Add taxonomic assignment to the log2FoldChange averages: 
+```{r}
+#Created a taxonomy file in excel by only having OTU column and taxonomy columns - import it:
+Taxonomy = read.csv("Output_files/7.Taxonomy_OTUs_>3_sorted.csv", header=TRUE, sep=",", skipNul=TRUE)
+
+#Combine average_OTUs with taxonomy:
+average_OTUs_taxonomy <- cbind(average_OTUs, Taxonomy)
+
+#Rename columns in for OTU and log2FoldChange:
+as.factor(average_OTUs_taxonomy$Group.1)
+as.factor(average_OTUs_taxonomy$x)
+
+names(average_OTUs_taxonomy)[names(average_OTUs_taxonomy) == "Group.1"] <- "OTU1"
+names(average_OTUs_taxonomy)[names(average_OTUs_taxonomy) == "x"] <- "log2FoldChange"
+
+#Save merged data with averages and taxonomy:
+write.table(average_OTUs_taxonomy, file = "Output_files/8.Merged_repeated_OTUs_averages_taxonomy_>3.csv", sep = ",", row.names = FALSE, col.names = TRUE)
+
+```
+
+
