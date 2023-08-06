@@ -1,0 +1,493 @@
+---
+title: "Analysis of Alpha and Beta diversity in R - rarefaction, alpha- and beta- diversity and vizualizations Healey_2018_V3V4_forward_only-inulin_fructo"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>")
+```
+
+### Packages needed:
+```{r}
+require(vegan)
+require(ggplot2)
+require(data.table)
+require(anchors)
+require(EcolUtils)
+require(car)
+require(tidyverse)
+require(dplyr)
+require(rstatix)
+library("extrafont")
+```
+
+### Set working directory:
+```{r}
+setwd("/Volumes/Seagate/Meta_analysis/Alpha_Beta_analysis/Healey_2018_V3V4/inulin_fructo/")
+```
+
+## __________ Documents needed: __________##
+* 1. *SV.table* - **filtered_forward_phylum_feature-table_modified_header.tsv** is the operational taxonomic unit table (OTU table) that was obtained after DADA2 and underwent curation by clearing mitochondrial and chloroplast DNA and only keeping OTUs that were assigned to the phylum level named. The header was modified to remove "Constructed from biom file" line and changed "OTU ID" to OTUID"
+
+* 2. *Metadata* -  **Healey_metadata_inulin_fructo.txt** is the Metadata file containing the description of each sample.
+
+*The files chosen are from the processing of the forward end reads.
+
+
+## __________ Read in your data _________ ##
+
+#### Import metadata:
+```{r}
+setwd("/Volumes/Seagate/Meta_analysis/Alpha_Beta_analysis/Healey_2018_V3V4/Input_files")
+
+metadata <- as.data.frame(fread("1.Healey_metadata_inulin_fructo.tsv"))
+
+str(metadata)
+```
+
+##### In metadata file, set subject-id, timepoint as factors: There are a number of advantages to converting categorical variables to factor variables. For instance, they can be used in statistical modeling where they will be implemented correctly, i.e., they will then be assigned the correct number of degrees of freedom
+```{r}
+metadata <- metadata %>%
+  convert_as_factor(`timepoint`)
+
+metadata <- metadata %>%
+  convert_as_factor(`subject_id`)
+
+metadata <- metadata %>%
+  convert_as_factor(`subject_id2`)
+
+metadata <- metadata %>%
+  convert_as_factor(`sampleid`)
+
+metadata <- metadata %>%
+  convert_as_factor(`sampleid2`)
+
+#Confirm variables have been changed to factors:
+class(metadata$`timepoint`)
+class(metadata$`subject_id`)
+class(metadata$`subject_id2`)
+class(metadata$`sampleid`)
+class(metadata$`sampleid2`)
+```
+
+#### Read in SV table with all data:
+```{r}
+setwd("/Volumes/Seagate/Meta_analysis/Alpha_Beta_analysis/Healey_2018_V3V4/Input_files")
+
+SV.table <- as.data.frame(fread("1.filtered_forward_phylum_feature-table_modified_header.tsv", header = TRUE))
+
+#Set OTUID as the row names:
+row.names(SV.table) <- SV.table$`#OTUID`
+SV.table <- SV.table[ , !(names(SV.table) %in% c("#OTUID"))]
+```
+
+#### Subset samples in inulin_fructo treatment only based on metadata:
+```{r}
+#Subset the samples in the inulin fiber intervention only:
+SV.table_inulin_fructo <- SV.table %>% select(metadata$sampleid2)
+```
+
+#### Save the subsetted data:
+```{r}
+setwd("/Volumes/Seagate/Meta_analysis/Alpha_Beta_analysis/Healey_2018_V3V4/inulin_fructo/Output_files")
+
+#Save subset of samples in a file:
+write.table(SV.table_inulin_fructo, file = "1.SV.table_inulin_fructo.tsv", sep = "\t", row.names = TRUE, col.names = NA)
+```
+
+
+## __________ Rarefy your data _________ ##
+
+#### Transform the dataframes because vegan expects rows = samples and columns = species:
+```{r}
+SV.table_inulin_fructo <- as.data.frame(t(SV.table_inulin_fructo))
+```
+
+#### Look at the first few rows and columns to ensure data got transposed:
+```{r}
+SV.table_inulin_fructo[1:5,1:5]
+```
+
+##### Delete the SVs that are not present at all in the samples, this can be possible as we subsetted the data and some SVs can be present in the other fiber treatments and not in this one for the same study:
+```{r}
+
+SV.table_inulin_fructo <- SV.table_inulin_fructo[, which(colSums(SV.table_inulin_fructo) != 0)]
+
+```
+
+#### See the total number of samples and SVs, by looking at the dimensions of the table:
+```{r}
+dim(SV.table_inulin_fructo)
+```
+##### Results:
+  R always uses rows, then columns. So in this case we have and 68 samples and 2707 SVs.
+
+#### If we now want to know the total number of reads we have we can just count up the total of the SVs sum in table:
+```{r}
+sum(SV.table_inulin_fructo)
+```
+##### Results:
+   We have 5008418 reads.
+
+
+#### To see the number of reads per sample, we simply need to add up the rows on the file:
+```{r}
+reads.per.sample <- rowSums(SV.table_inulin_fructo) %>% sort()
+reads.per.sample
+
+#Save a file with the information of reads per sample:
+setwd("/Volumes/Seagate/Meta_analysis/Alpha_Beta_analysis/Healey_2018_V3V4/inulin_fructo/Output_files")
+write.table(reads.per.sample, file = "2.reads.per.sample.tsv", sep = "\t", row.names = TRUE, col.names = NA)
+```
+
+#### To see the max. & min. number of reads and how frequently certain features (SVs) are found, add up the rows and col:
+```{r}
+
+rowSums(SV.table_inulin_fructo) %>% summary()
+colSums(SV.table_inulin_fructo) %>% summary()
+```
+#### Result:
+* The min. number of sequences in a sample is 628 and the max. is 152414; since 628 is too low, we can use 6014 for rarefaction depth- we will lose one sample.
+ * The min. value for the presence of an SV is 2 and the max. times an SV is present is 233369.
+
+#### Performing the actual rarefaction 
+* Rarefaction depth should be >= 1000 at least, we will use the minimum value of sequence depth which is 6014 
+* Round out the averages, so we will not have exactly 6014 sequences in each, but we also will not be keeping the super rare, super low abundance << 1 taxa https://rdrr.io/github/GuillemSalazar/EcolUtils/man/rrarefy.perm.html
+```{r, results='hide'}
+set.seed(2022) #reproducible results
+SV.table.rarefied <- as.data.frame((rrarefy.perm(SV.table_inulin_fructo, sample = 6014, n = 1000, round.out = TRUE)))
+
+```
+
+#### To check that the rarefaction worked out check the number of reads per sample:
+```{r}
+sort(rowSums(SV.table.rarefied))
+```
+#### Results:
+  We obtained roughly the same  number of reads per sample.
+
+#### Drop those samples that had under rarefaction threshold (samples SRR6185270):
+#https://www.datasciencemadesimple.com/delete-or-drop-rows-in-r-with-conditions-2/
+```{r}
+ SV.table.rarefied <- SV.table.rarefied[!(row.names(SV.table.rarefied) %in% c('SRR6185270')), ]
+
+sort(rowSums(SV.table.rarefied))
+```
+#### Results:
+We dropped sample SRR6185270
+
+#### Save filtered & rarefied OTU SV.table.rarefied:
+```{r}
+setwd("/Volumes/Seagate/Meta_analysis/Alpha_Beta_analysis/Healey_2018_V3V4/inulin_fructo/Output_files")
+
+write.table(SV.table.rarefied, file = "3.inulin_fructo_OTU_filtered_rarefied_6014_ROUNDED.tsv", sep = "\t", row.names = TRUE, col.names = NA)
+```
+
+## __________ Alpha-diversity Analyses_________ ##
+
+#### Calculate different alpha diversity metrics (Shannon, Richness, Simpson):
+```{r}
+shannon <- as.data.frame(diversity(SV.table.rarefied, index = "shannon"))
+names(shannon) <- c("Shannon")
+richness <- as.data.frame(apply(SV.table.rarefied[,]>0, 1, sum))
+names(richness) <- c("Richness")
+simpson <- as.data.frame(diversity(SV.table.rarefied, index = "simpson"))
+names(simpson) <- c("Simpson")
+```
+
+#### Merge alpha-diversity metrics together:
+```{r}
+tmp1 <- merge(richness, shannon, by.x = "row.names", by.y = "row.names")
+all.alpha <- merge(tmp1, simpson, by.x = "Row.names", by.y = "row.names")
+names(all.alpha) <- c("SampleID", names(all.alpha)[2:length(names(all.alpha))])
+```
+
+#### Merge metadata to aplha metrics so you can create cool plots:
+```{r}
+merged_alpha <- merge(all.alpha, metadata, by.x = "SampleID", by.y = "sample_id_2")
+```
+
+#### Save merged alpha metrics and metadata in a text file:
+```{r}
+setwd("/Volumes/Seagate/Meta_analysis/Alpha_Beta_analysis/Healey_2018_V3V4/inulin_fructo/Output_files")
+
+write.table(x = merged_alpha, file = "4.inulin_fructo_alpha_metrics_merged_metadata.txt", sep = "\t", row.names = TRUE, col.names = NA) 
+
+#Take a look at the first few rows of the merged dataset:
+head(merged_alpha)
+```
+
+#### Get a summary of Alpha diversity metrics:
+```{r}
+summary(merged_alpha$Shannon)
+
+summary(merged_alpha$Simpson)
+
+summary(merged_alpha$Richness)
+
+```
+
+#### Visualization Shannon by all timepoints:
+
+##### Create a boxplot - Shannon:
+```{r}
+ggplot (merged_alpha, aes(x= factor (timepoint, level= c("before","after")), y=Shannon)) +
+  geom_boxplot() +
+  geom_point(shape=21, size=2, (aes(fill = timepoint))) +
+  scale_fill_hue(limits = c ("before","after")) +
+  geom_line(aes(group = `subject_id`), color="grey") +
+  labs(title = "Shannon-alpha diversity boxplot / Healey_2018_V3V4-inulin_fructo", x= "Timepoint in fiber treatment", y= "Shannon alpha diversity", fill="Timepoint") +
+  theme_bw (base_family = "Tw Cen MT", base_size = 14) +
+  stat_summary(fun = mean, geom = "point", shape=23, size=2.5, fill="black")
+```
+
+#### Save figure:
+```{r}
+ggsave("Figures/shannon_box.ALL.png", width = 7, height = 5)
+```
+
+##### Calculate means of both timepoints of Shannon with aggregate program https://r-coder.com/aggregate-r/ :
+```{r}
+means.shannon <- aggregate(merged_alpha$Shannon, list(merged_alpha$timepoint), mean)
+means.shannon
+```
+
+#### Visualization Simpson by all timepoints:
+
+##### Create a boxplot - Simpson:
+```{r}
+ggplot (merged_alpha, aes(x= factor (timepoint, level= c("before","after")), y=Simpson)) +
+  geom_boxplot() +
+  geom_point(shape=21, size=2, (aes(fill = timepoint))) +
+  scale_fill_hue(limits = c ("before","after")) +
+  geom_line(aes(group = `subject_id`), color="grey") +
+  labs(title = "Simpson-alpha diversity boxplot / Healey_2018_V3V4-inulin_fructo", x= "Timepoint in fiber treatment", y= "Simpson alpha diversity", fill="Timepoint") +
+  theme_bw (base_family = "Tw Cen MT", base_size = 14) +
+  stat_summary(fun = mean, geom = "point", shape=23, size=2.5, fill="black")
+```
+
+#### Save figure:
+```{r}
+ggsave("Figures/simpson_box.ALL.png", width = 7, height = 5)
+```
+
+##### Calculate means of both timepoints of Simpson with aggregate program https://r-coder.com/aggregate-r/ :
+```{r}
+means.simpson <- aggregate(merged_alpha$Simpson, list(merged_alpha$timepoint), mean)
+means.simpson
+```
+
+#### Visualization Shannon by 2 timepoints only: ONLY TWO TIMEPOINTS - THEREFORE THIS IS NOT NEEDED
+
+##### Prepare dataframe to correct formatting for statistical testing:
+```{r}
+# Delete samples that do not have two timepoints:
+pairs.only.all.alpha <- merged_alpha %>%
+  filter(duplicated(`subject_id`) | duplicated(`subject_id`, fromLast=TRUE)) %>%
+  arrange(`timepoint`,`subject_id`)
+
+
+#Save file with only before and during subjects, any subjects that did not have all timepoints were deleted:
+write.table(x = pairs.only.all.alpha, file = "Output_files/6.inulin_fructo_alpha_metrics_merged_metadata_only_pairs.txt", sep = "\t", row.names = TRUE, col.names = NA) 
+
+
+#Sort the data by timepoint and subject-id:
+paired_data_alpha <- pairs.only.all.alpha[order(pairs.only.all.alpha$subject_id, pairs.only.all.alpha$`timepoint`),]
+
+#see sorted data:
+head(paired_data_alpha)
+```
+
+##### Perform summary and statistics to compare alpha diversity metrics between the same subjects before and after fiber intervention:
+```{r}
+#Do summary of Shannon alpha metric:
+summary(paired_data_alpha$timepoint)
+summary(paired_data_alpha$`subject_id`~timepoint~Shannon)
+
+#pairwise t-test Shannon:
+pairwise_t_test_shannon<- t.test(Shannon~timepoint,paired=TRUE, data=paired_data_alpha, p.adjust.method = "bonferroni" )
+pairwise_t_test_shannon
+```
+
+```{r}
+#pairwise t-test Simpson:
+summary(paired_data_alpha$`subject_id`~timepoint~Simpson)
+pairwise_t_test_simpson<- t.test(Simpson~timepoint,paired=TRUE, data=paired_data_alpha, p.adjust.method = "bonferroni" )
+pairwise_t_test_simpson
+```
+
+```{r}
+#general linear model:
+glm.test.shannon <- glm(Shannon~timepoint, data=paired_data_alpha, family = "gaussian")
+glm.test.shannon
+
+#linear mixed model: https://ourcodingclub.github.io/tutorials/mixed-models/
+#association between timepoint and the Shannon, we want to know if that association exists after controlling for the variation in subjetc_id.
+library(lme4)
+
+lm.test.shannon <- lmer(Shannon~timepoint + (1|`subject_id`), data = paired_data_alpha)
+summary(lm.test.shannon)
+
+```
+
+##### Looking at these plots and t-tests, there are a number of questions we want to ask:
+
+* Are before fiber samples more/less diverse than after fiber samples?
+    - ANSWER: Based on the plots, it seems that alpha diversity decreases
+ 
+* Does diversity change after treatments?
+    - ANSWER: Based on the mean alpha diversity metrics, it seems that after the intervention the diversity decreases
+ 
+* Is the difference in microbiome richness between before and after fiber treatment statistically significant??
+    - ANSWER: YES, based on the paired t-tests for Shannon and Simpson alpha diversity metrics.
+
+## _____________ Beta-Diversity Analysis________ ##
+
+DO NOT use rarefied data here because you can rarefy within the Bray-Curtis calculation:
+
+#### Create your Bray-Curtis dissimilarities to use in NMDS ordination:
+
+* Note: sample = is your rarefaction depth, which we are setting as the lowest reads in our dataset
+https://rdrr.io/cran/vegan/man/avgdist.html
+* Default is Bray-Curtis calculated by vegdist()
+* Transform data using square root to minimize influence of most abundant groups.
+* avgdist=Averaged Subsampled Dissimilarity Matrices.The function computes the dissimilarity matrix of a dataset multiple times using vegdist while randomly subsampling the dataset each time. All of the subsampled iterations are then averaged (mean or median) to provide a distance matrix that represents the average of multiple subsampling iterations. We use median so as to discount any outlier subsamplings. https://cran.r-project.org/web/packages/vegan/vegan.pdf
+```{r}
+set.seed(2022) #reproducible results
+
+bray.dist <- avgdist(SV.table_inulin_fructo, 
+                     sample = 6014, 
+                     meanfun = median, transf = sqrt, iterations = 1000)
+
+```
+
+#### Next, run an NMDS, which is a form of ordination and can be used to visualize beta diversity in base R:
+```{r}
+set.seed(2022) #reproducible results
+NMDS1 <- metaMDS(bray.dist, autotransform = FALSE, k = 2)
+NMDS1
+```
+
+##### Store the first two columns as the x and y coordinates, so that they may be plotted:
+```{r}
+coordinates <- data.frame(NMDS1$points[,1:2])
+
+#Save Bray-Curtis dissimilarity NMDS cordinates:
+  write.table(x = coordinates, file = "Output_files/7.NMDS.coordinates.txt", sep = "\t", row.names = TRUE, col.names = NA)  
+```
+
+##### Plot the coordinates data from NMDS with base R:
+```{r}
+plot(x = coordinates$MDS1, y = coordinates$MDS2)
+```
+
+##### To make a more sophisticated plot, merge the stress scores with the metadata file:
+```{r}
+nmds_plus_metadata <- merge(coordinates, metadata, by.x = "row.names", by.y = "sample_id_2")
+
+#Save Bray-Curtis dissimilarity NMDS cordinates plus metadata:
+  write.table(x = coordinates, file = "Output_files/8.NMDS.coordinates.metadata.txt", sep = "\t", row.names = TRUE, col.names = NA) 
+
+```
+
+#### Build NMDS with timepoint as color:
+```{r}
+  ggplot(data = nmds_plus_metadata) +
+  aes(x = MDS1, y = MDS2, fill = as.factor(`timepoint`)) + 
+  geom_point(pch = 21, aes(fill = as.factor(`timepoint`)), size = 10, alpha = 0.7) +
+  scale_fill_manual(values =c("#900C3F", "#FFC300")) +
+  guides(color = F, fill = guide_legend(override.aes = list(shape = 21))) +
+  geom_text(label = (nmds_plus_metadata$`subject_id2`), alpha = 0.7) +
+labs(title = "MDS Healey_2018_V3V4 inulin_fructo", x= "MDS1", y= "MDS2", fill="Timepoint") +
+  theme_bw (base_family = "Tw Cen MT", base_size = 12)
+```
+
+#### Save figure:
+```{r}
+ggsave("Figures/NMDS.all.png", width = 7, height = 5)
+```
+
+#### To run statistical analyses, make averaged Bray-Curtis dissimilarity matrix:
+```{r}
+set.seed(2022) #reproducible results
+  bray.dist.matrix <- as.data.frame(as.matrix(avgdist(SV.table_inulin_fructo, sample = 6014, meanfun = median, transf = sqrt, iterations = 1000))) #default is Bray-Curtis calculated by vegdist()
+```
+
+#### Save Bray-Curtis dissimilarity matrix in a file:
+```{r}
+  write.table(x = bray.dist.matrix, file = "Output_files/9.inulin_fructo_median_bray_curtis_sqrt_q1_forward_rarefied_to_6014.txt", sep = "\t", row.names = TRUE, col.names = NA)  
+  
+```
+  
+#### Confirm variables have been changed to factors in metadata file (if you have not done so already):
+```{r}
+class(metadata$`timepoint`)
+class(metadata$`subject_id`)
+```
+
+#### Remove from metadata the dropped sample because below rarefaction threshold:
+```{r}
+metadata <- metadata[!(metadata$sampleid2 %in% c('SRR6185270')), ]
+
+```
+
+#### Example 1,interaction subject X timepoint, by=terms assesses the significance for each term sequentially from first to last:
+```{r}
+set.seed(2022) #reproducible results
+  PERMANOVA1 <- adonis2(bray.dist.matrix~`subject_id`*`timepoint`, data=metadata, method = "bray", by="terms",permutations = 999)
+  PERMANOVA1
+
+  #Save PERMANOVA:
+write.table(PERMANOVA1, file = "Output_files/10.PERMANOVA_interaction_term.txt", sep = "\t", row.names = TRUE, col.names = NA)
+```
+
+#### Example 2, testing interaction subject X timepoint, ignoring order by=NULL assesses the overall significance of all terms together:
+```{r}
+set.seed(2022) #reproducible results
+ PERMANOVA2 <- adonis2(bray.dist.matrix~`subject_id`*`timepoint`, data=metadata, method = "bray", by= NULL, permutations = 999)
+  
+  PERMANOVA2
+
+  #Save PERMANOVA:
+write.table(PERMANOVA2, file = "Output_files/11.PERMANOVA_interaction_null.txt", sep = "\t", row.names = TRUE, col.names = NA)
+```
+
+
+#### Example 3, not testing interaction subject + timepoint, by=terms assesses the significance for each term sequentially from first to last::
+```{r}
+set.seed(2022) #reproducible results
+PERMANOVA3 <-  adonis2(bray.dist.matrix~`subject_id`+`timepoint`, data=metadata, method = "bray", by="terms",permutations = 999)
+  
+  PERMANOVA3
+
+  #Save PERMANOVA:
+write.table(PERMANOVA3, file = "Output_files/12.PERMANOVA_NOinteraction_term.txt", sep = "\t", row.names = TRUE, col.names = NA)
+```
+
+#### Example 4, not testing interaction subject + timepoint, ignoring order by=NULL assesses the overall significance of all terms together:
+```{r}
+set.seed(2022) #reproducible results
+PERMANOVA4 <-  adonis2(bray.dist.matrix~`subject_id`+`timepoint`, data=metadata, method = "bray", by=NULL,permutations = 999)
+  
+  PERMANOVA4
+
+  #Save PERMANOVA:
+write.table(PERMANOVA4, file = "Output_files/13.PERMANOVA_NOinteraction_null.txt", sep = "\t", row.names = TRUE, col.names = NA)
+```
+
+
+#### Example 5, testing subject_id by itself:
+```{r}
+set.seed(2022) #reproducible results
+  adonis2(bray.dist.matrix~`subject_id`, data=metadata, permutations = 999, method = "bray")
+```
+
+* subject_id =  YES significant, explaining 85% of variance
+* timepoint (before vs after) =  YES significant, explaining 1.6% of variance
+* subject_id and timepoint interaction =  could not be tested
+
+##### To see session information:
+```{r}
+sessionInfo()
+```
