@@ -1,0 +1,134 @@
+---
+title: "Betadisper Liu_GOS"
+---
+
+```{=html}
+<style>
+
+body, td {
+   font-family: "Tw Cen MT";
+   font-size: 16px;
+}
+
+</style>
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+### Packages needed:
+```{r}
+require(vegan)
+require(ggplot2)
+require(data.table)
+require(anchors)
+require(EcolUtils)
+require(car)
+require(tidyverse)
+require(dplyr)
+require(rstatix)
+library("extrafont")
+```
+
+### Set working directory:
+```{r}
+setwd("/Volumes/Seagate_Cedars/Martiny_Lab/Meta-analysis/Data_analysis/Meta_analysis/Betadisp/Liu_2017_GOS")
+```
+
+## __________ Documents needed: __________##
+
+* 1. *beta_matrix* - **9.GOS_median_bray_curtis_sqrt_q1_single_rarefied_to_1465.txt** 
+
+* 2. *metadata* - **1.Liu_metadata_GOS.tsv** 
+
+* 3. *beta_coordinates* - **7.NMDS.coordinates.txt** 
+
+## __________ Read in your data _________ ##
+
+
+#### Read in table with all alpha diversity data:
+```{r}
+beta_coordinates <- as.data.frame(fread("Input/7.NMDS.coordinates.txt"))
+
+beta_matrix <- as.data.frame(read.table("Input/9.GOS_median_bray_curtis_sqrt_q1_single_rarefied_to_1465.txt", header = TRUE, row.names=1))
+
+
+metadata <- as.data.frame(fread("Input/1.Liu_metadata_GOS.tsv", header = TRUE))
+```
+
+
+## ___________ Beta-Diversity BETADISPER Analysis ________ ##
+
+
+### Test for variation dispersion of the data:
+```{r}
+
+#Run betadisper test:
+betadisper.test <- betadisper(as.dist(beta_matrix), metadata$timepoint, type = "centroid", bias.adjust = FALSE,
+       sqrt.dist = FALSE, add = FALSE)
+
+#Check results:
+set.seed(2022)
+bd.result <- permutest(betadisper.test)
+bd.result
+```
+
+Result: No significant variation between the before and after samples.
+
+##### Save PERMDISP results:
+```{r}
+  write.table(x = bd.result$tab, file = "Output/1.Betadisper_1.txt", sep = "\t", row.names = TRUE, col.names = NA) 
+```
+
+
+### Confirm PERMANOVA result from before:
+```{r}
+set.seed(2022) #reproducible results
+  PERMANOVA1 <- adonis2(as.dist(beta_matrix)~`subject_id`*`timepoint`, data=metadata, method = "bray", by="terms",permutations = 999)
+  PERMANOVA1
+```
+
+```{r}
+set.seed(2022) #reproducible results
+PERMANOVA3 <-  adonis2(as.dist(beta_matrix)~`subject_id`+`timepoint`, data=metadata, method = "bray", by="terms",permutations = 999)
+PERMANOVA3
+```
+
+
+### NMDS plot:
+
+##### To make a more sophisticated plot, merge the stress scores with the metadata file:
+```{r}
+nmds_plus_metadata <- merge(beta_coordinates, metadata, by.x = "V1", by.y = "sampleid2")
+
+#Save Bray-Curtis dissimilarity NMDS cordinates plus metadata:
+  write.table(x = nmds_plus_metadata, file = "Output/8.NMDS.coordinates.metadata.txt", sep = "\t", row.names = TRUE, col.names = NA) 
+
+```
+
+
+```{r}
+NMDS.timepoint <- ggplot(data = nmds_plus_metadata) +
+  scale_fill_manual(values=c("#900C3F", "#FFC300")) +
+  aes(x = MDS1, y = MDS2, fill = as.factor(`timepoint`)) + 
+  geom_point(pch = 21, aes(fill = as.factor(`timepoint`)), size = 5, alpha = 0.7) +
+labs(title = "NMDS Liu_GOS", x= "MDS1", y= "MDS2", fill="Timepoint") +
+  stat_ellipse(size=1,aes(color=timepoint)) +
+  scale_color_manual(values=c("#900C3F", "#FFC300")) +
+  theme_bw (base_family = "Tw Cen MT", base_size = 12) +
+  guides (fill=guide_legend(nrow=9))
+
+NMDS.timepoint
+```
+
+#### Save figure:
+```{r}
+ggsave("Figures/NMDS.Liu_GOS.png", width = 7, height = 5)
+```
+
+
+##### To see session information:
+```{r}
+sessionInfo()
+```
